@@ -1,0 +1,71 @@
+// SPDX-License-Identifier: None
+pragma solidity ^0.8.20;
+
+contract CA{
+    uint256 public StartDate;
+    uint8 public AgreementDays;
+    uint128 public ProjectAmount = 1_000 * (10 ** 6); // 1,000 TRX in wei units
+// or simply use the native uint type if you're using a recent version of Solidity with built-in support for non-integer types like address and mapping.
+    uint128 public GaranteeAmount = 1_000 * (10 ** 6); // in wei units, or simply use the native uint type if you're using a recent version of Solidity with built-in support for non-integer types like address and mapping.
+    address payable Employer;                //we can have transaction with payable addresses in contract
+    address payable Contractor;
+    address Judge;                           //third partey
+    enum Status{notstarted,paid,started,ended,suspended,failed}
+    Status currectstatus;
+    constructor(address payable _Employer,address payable _Contractor,address _Judge,uint8 _AgreementDays){
+        Employer =_Employer;
+        Contractor =_Contractor;
+        Judge =_Judge;
+        AgreementDays =_AgreementDays;
+        currectstatus =Status.notstarted;
+    }
+    function pay()public payable returns(string memory){
+        require(currectstatus==Status.notstarted);
+        require(msg.sender==Employer);
+        require(msg.value==ProjectAmount);
+        StartDate=block.timestamp;
+        currectstatus=Status.paid;
+        return"success";
+    }
+
+    function Deposit() public payable returns(string memory){
+        require(msg.sender==Contractor);
+        require(msg.value==GaranteeAmount);
+        require(currectstatus==Status.paid);
+        currectstatus=Status.started;
+        return "success";
+    }
+    function confirm(bool verify) public view returns(string memory){
+        require(msg.sender==Employer);
+        require(currectstatus==Status.started);
+        if(verify==true){
+            currectstatus==Status.suspended;
+            return "success";
+        }else{
+            return "deadline is not over yet";
+        }
+    }
+    function judgment (bool verify) public returns(string memory){
+        require(currectstatus==Status.suspended);
+        require(msg.sender==Judge);
+        if(verify==true){
+            currectstatus=Status.ended;
+        }else{
+            currectstatus = Status.failed;
+        }
+        return "seccess";
+    }
+    function withdrawContractor() public payable returns(string memory){
+        require(msg.sender==Contractor);
+        require(currectstatus==Status.ended);
+        Contractor.transfer(((1100 * 10 **6)));        
+        return "success";
+    }
+    function withdrawEmployer() public payable returns(string memory){
+        require(msg.sender==Contractor);
+        require(currectstatus==Status.failed);
+        Contractor.transfer(((1100 * 10 **6)));
+        return "success";
+    }
+}
+//remember to search about add voting or agreement of the judger for two sides of the contract 
